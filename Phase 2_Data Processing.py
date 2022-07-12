@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[ ]:
-
 
 import pandas as pd
 import numpy as np
@@ -75,18 +73,11 @@ for participant, file in enumerate(data_files):
         dfs_ecg.append(data)
         dfs_rpeaks.append(anno)
 
-
-# In[ ]:
-
-
 # Save
 df_ecg = pd.concat(dfs_ecg).to_csv("ECGs.csv", index=False)
 df_rpeaks = pd.concat(dfs_rpeaks).to_csv("Rpeaks.csv", index=False)
 
-
-# In[ ]:
-
-
+###############################################################################
 # # Phase 2b: Data Quality Check
 # Remove signal noise
 
@@ -96,10 +87,6 @@ for x in range(len(dfs_ecg)):
     # Extract clean ECG and R-peaks location
     signals, info = nk.ecg_process((dfs_ecg[x])["ECG"], sampling_rate=360)
     clean_ecgs.append(signals["ECG_Clean"])
-
-
-# In[ ]:
-
 
 # Segment signal into individual heartbeats
 heartbeats = [];
@@ -116,10 +103,6 @@ for x in range(len(clean_ecgs)):
                        })
     temp =  temp.reset_index().drop(['level_0','level_1'], axis=1) # drop multiIndex
     heartbeats.append(temp)
-
-
-# In[ ]:
-
 
 nsymbol = ["N", "L", "R", "B", "e", "j"]
 import copy
@@ -153,17 +136,11 @@ for x in range(len(copy_hb)):
     label_count = copy_hb[x].Label.unique()
     for y in range (len(label_count)):
         copy_hb[x].loc[copy_hb[x].Label == (label_count[y]), 'Label'] = y+1
-    print(x+1, ': -------------------------------------------------')
-    print(copy_hb[x])
 
-
-# In[ ]:
-
-
-waves_peak = []
-
+###############################################################################
 # # # Phase 2c: Identify fiducial points
 # # Find peaks with neurokit
+waves_peak = []
 for x in range (len(copy_hb)):
     _, rpeaks = nk.ecg_peaks(copy_hb[x]['Signal'], sampling_rate=360)
     
@@ -181,16 +158,8 @@ for x in range (len(copy_hb)):
     temp.insert(5, 'ECG_R_Peaks', rpeaks['ECG_R_Peaks'])
     waves_peak.append(temp)
 
-
-# In[ ]:
-
-
 copy_wp = copy.deepcopy(waves_peak)
 compare = copy.deepcopy(copy_hb)
-
-
-# In[ ]:
-
 
 # Label each heartbeat id & type in peaks location file
 for x in range (len(copy_wp)):
@@ -209,10 +178,6 @@ for x in range (len(copy_wp)):
                     compare[x].drop(compare[x].index[compare[x]['Label'] == z], inplace=True)
                     break
 
-
-# In[ ]:
-
-
 # Filter and remove heartbeats with NaN, or wrong S & T peak detection
 for x in range (len(copy_wp)):
     wrong_peak = copy_wp[x][(copy_wp[x]['ECG_S_Peaks'] >= copy_wp[x]['ECG_T_Peaks'])].index
@@ -224,27 +189,12 @@ for x in range (len(copy_wp)):
     print(x+1, ': -------------------------------------------------')
     print(copy_wp[x])
 
-
-# In[ ]:
-
-
 # Categorize into normal and abnormal heartbeats
 dfs_peaks = pd.concat(copy_wp)
 dfs_peaks = dfs_peaks.reset_index(drop=True)
 grouped = dfs_peaks.groupby("Type")
 dfs_abnormal = grouped.get_group("A")
 normal = grouped.get_group("N")
-
-
-# In[ ]:
-
-
-print(len(dfs_abnormal))
-print(len(normal))
-
-
-# In[ ]:
-
 
 # cut down sample size of normal heartbeats
 import random
@@ -261,10 +211,6 @@ dfs_peaks =  pd.concat([dfs_normal,dfs_abnormal], axis=0)
 dfs_peaks.sort_values(by=['Record', 'Label'], inplace=True)
 dfs_peaks = dfs_peaks.reset_index(drop=True)
 
-
-# In[ ]:
-
-
 temp_heartbeats = pd.concat(copy_hb)
 
 dfs_heartbeats = pd.DataFrame()
@@ -277,10 +223,6 @@ for x in record_count:
     temp = temp[temp['Label'].isin(label_count)]
     temp.sort_values(by=['Index'], inplace=True)
     dfs_heartbeats = dfs_heartbeats.append(temp, ignore_index = True)
-dfs_heartbeats
-
-
-# In[ ]:
 
 
 # Save
@@ -290,10 +232,7 @@ df_normal = dfs_normal.to_csv("Normal.csv", index=False) # normal beats
 df_abnormal = dfs_abnormal.to_csv("Abnormal.csv", index=False) # abnormal beats
 backup_heartbeats = temp_heartbeats.to_csv("backup_Heartbeats.csv", index=False) # ECG signal of each heartbeats (raw)
 
-
-# In[ ]:
-
-
+###############################################################################
 # # Phase 2d: Signal trimmering
 # Process heartbeats to fixed dimension
 record_count = updated_heartbeats.Record.unique()
@@ -317,10 +256,6 @@ for x in record_count:
         trimmed_heartbeats = trimmed_heartbeats.append(hb2)
 trimmed_heartbeats = trimmed_heartbeats.reset_index(drop=True)
 
-
-# In[ ]:
-
-
 # Check length of each heartbeat * picked 250 at the end *
 df_cols = ['Length', 'Label', 'Record' , 'Type', 'Participant']
 len_heartbeats = pd.DataFrame(columns=df_cols);
@@ -340,10 +275,6 @@ for x in record_count:
         }, ignore_index = True)
 len_heartbeats
 
-
-# In[ ]:
-
-
 # Cut each heartbeat at 250
 record_count = trimmed_heartbeats.Record.unique()
 record_count.sort()
@@ -360,17 +291,9 @@ for x in record_count:
         temp2 = temp2.values[0:249].tolist()
         prep_hb.append(temp2)
 
-
-# In[ ]:
-
-
 from keras.utils.data_utils import pad_sequences
 # pad sequence with zeroes for those length < 250
 padded = pad_sequences(prep_hb, padding='post',maxlen=250, dtype='float64')
-
-
-# In[ ]:
-
 
 prep_x = pd.DataFrame(padded)
 
@@ -394,12 +317,8 @@ for x in record_count:
 # Join x and y together for final dataset
 full_prep_set = prep_x.join(prep_y)
 
-
-# In[ ]:
-
-
 # Save
 x = prep_x.to_csv("prep_x.csv", index=False) # ecg signal matrix
-y = prep_y.to_csv("prep_y.csv", index=False) # type of each heartbeats (label, record, participant)
+y = prep_y.to_csv("prep_y.csv", index=False) # type of each heartbeats ,label, record, participant
 full = full_prep_set.to_csv("full_prep_set.csv", index=False) # full data set
 
