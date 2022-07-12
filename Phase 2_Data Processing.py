@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-
+# import important libraries
 import pandas as pd
 import numpy as np
 import wfdb
@@ -11,6 +11,7 @@ pd.options.mode.chained_assignment = None  # default='warn'
 import warnings
 warnings.filterwarnings('ignore')
 
+###############################################################################
 # Phase 2a: Data Collection 
 
 data_files = ["mit-bih-arrhythmia-database-1.0.0/" + file for file in os.listdir("mit-bih-arrhythmia-database-1.0.0") if ".dat" in file]
@@ -140,6 +141,7 @@ for x in range(len(copy_hb)):
 ###############################################################################
 # # # Phase 2c: Identify fiducial points
 # # Find peaks with neurokit
+
 waves_peak = []
 for x in range (len(copy_hb)):
     _, rpeaks = nk.ecg_peaks(copy_hb[x]['Signal'], sampling_rate=360)
@@ -224,7 +226,6 @@ for x in record_count:
     temp.sort_values(by=['Index'], inplace=True)
     dfs_heartbeats = dfs_heartbeats.append(temp, ignore_index = True)
 
-
 # Save
 df_heartbeats = dfs_heartbeats.to_csv("Heartbeats.csv", index=False) # ECG signal of each heartbeats (filtered)
 df_peaks = dfs_peaks.to_csv("Peaks.csv", index=False) # all detected peaks location index
@@ -235,6 +236,7 @@ backup_heartbeats = temp_heartbeats.to_csv("backup_Heartbeats.csv", index=False)
 ###############################################################################
 # # Phase 2d: Signal trimmering
 # Process heartbeats to fixed dimension
+
 record_count = updated_heartbeats.Record.unique()
 record_count.sort()
 df_cols = ['Signal', 'Label', 'Record' , 'Type', 'Participant']
@@ -273,7 +275,6 @@ for x in record_count:
         'Type': temp2['Type'].values[0],
         'Participant': temp2['Participant'].values[0]
         }, ignore_index = True)
-len_heartbeats
 
 # Cut each heartbeat at 250
 record_count = trimmed_heartbeats.Record.unique()
